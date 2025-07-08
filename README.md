@@ -75,8 +75,33 @@ $
 ```
 ---
 
+---
 
-## Running with Docker 🐳
+## [UPDATE]: New: Logging Reactor
+
+This playground now has **two Reactors** to show how multiple services can subscribe to the same events:
+
+- **Reactor:** Subscribes to the `object_detected` events and prints a reaction to the console.
+- **LoggerReactor:** Subscribes to the same events and writes them to a log file you can watch in real-time.
+
+**Log file path (inside the container):**
+`/app/events.log`
+
+**How to view the log file:**
+
+Open a shell into the running container:
+```bash
+   docker exec -it pyzmq-playground bash
+```
+Tail the log file:
+```tail -f /app/events.log```
+
+You’ll see timestamped detection events appear as they happen!
+
+This shows how you can fan out the same pub/sub stream to multiple independent services with different side effects — one for real-time actions, one for persistent logging.
+
+
+## [UPDATE]: Running with Docker 🐳
 
 This playground is fully containerized so you can run it anywhere!
 
@@ -114,7 +139,7 @@ There is a helper script to do it for you.
 **Note:** Always run these commands in the folder containing `docker-compose.yml`.
 
 ---
-s
+
 ## How it works
 - ZeroMQ PUB/SUB: The Detector binds a PUB socket on tcp://*:5556.
 - The Reactor connects a SUB socket to tcp://localhost:5556.
