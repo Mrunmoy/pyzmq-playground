@@ -1,0 +1,7 @@
+version: "3.8"
+
+services:
+  playground:
+    build: .
+    container_name: pyzmq-playground
+    restart: unless-stopped

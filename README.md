@@ -75,6 +75,46 @@ $
 ```
 ---
 
+
+## Running with Docker 🐳
+
+This playground is fully containerized so you can run it anywhere!
+
+### Build & run (attached mode)
+
+From your project root:
+```bash
+docker-compose up --build
+```
+
+- Builds the Docker image and starts the orchestrator.
+- The orchestrator runs `detector.py` and `reactor.py` inside the container.
+- **Logs are shown live in the same terminal** — thanks to Python’s unbuffered output.
+
+Stop it anytime with `Ctrl+C` — the orchestrator will shut down the Detector & Reactor cleanly.
+
+### Run in the background (detached mode)
+
+```bash
+docker-compose up --build -d
+```
+
+View logs:
+```bash
+docker-compose logs -f playground
+```
+
+Stop and remove the container:
+```bash
+docker-compose down
+```
+
+There is a helper script to do it for you.
+
+**Note:** Always run these commands in the folder containing `docker-compose.yml`.
+
+---
+s
 ## How it works
 - ZeroMQ PUB/SUB: The Detector binds a PUB socket on tcp://*:5556.
 - The Reactor connects a SUB socket to tcp://localhost:5556.
@@ -82,11 +122,13 @@ $
 - Orchestration: The Orchestrator runs both services in separate processes and shuts them down gracefully with Ctrl+C.
 
 ---
+
 ## Next ideas
 
+- Dockerize it [done]s
 - Add another Reactor that logs events to a file or database.
 - Build a simple web dashboard to trigger and visualize detections live.
-- Dockerize it
+
 
 ---
 
