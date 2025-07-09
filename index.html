@@ -1,0 +1,39 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Playground Dashboard</title>
+</head>
+<body>
+  <h1>pyzmq-playground Dashboard</h1>
+
+  <div>
+    <strong>Event Bus:</strong> tcp://localhost:5556<br/>
+    <strong>Control PUSH:</strong> tcp://localhost:6001
+  </div>
+
+  <pre id="logBox" style="background:#111; color:#0f0; padding:10px; height:300px; overflow:auto;"></pre>
+
+  <button onclick="sendEvent('force_detect')">Trigger: Force Detect</button>
+
+  <script>
+    const ws = new WebSocket("ws://" + window.location.host + "/ws");
+
+    ws.onmessage = function(event) {
+      const logBox = document.getElementById('logBox');
+      logBox.textContent += event.data;
+      logBox.scrollTop = logBox.scrollHeight;
+    };
+
+    function sendEvent(eventName) {
+      fetch("/trigger", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event: eventName })
+      })
+      .then(res => res.json())
+      .then(data => console.log(data));
+    }
+  </script>
+</body>
+</html>

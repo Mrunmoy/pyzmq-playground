@@ -1,7 +1,10 @@
 import zmq
+from pathlib import Path
 from datetime import datetime
 
-LOG_FILE = "/app/events.log"
+# Use an env var if you want later, or just default to relative
+LOG_FILE = Path("events.log").resolve()
+print(f"LoggerReactor: logging to {LOG_FILE}")
 
 context = zmq.Context()
 subscriber = context.socket(zmq.SUB)
@@ -14,7 +17,7 @@ try:
     while True:
         message = subscriber.recv_string()
         timestamp = datetime.utcnow().isoformat()
-        log_line = f"{timestamp} - {message}\\n"
+        log_line = f"{timestamp} - {message}\n"
         with open(LOG_FILE, "a") as f:
             f.write(log_line)
         print(f"LoggerReactor: wrote '{message}' to {LOG_FILE}")
