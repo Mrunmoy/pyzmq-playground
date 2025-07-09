@@ -1,30 +1,42 @@
-# web_dashboard.py
 import asyncio
 import json
 from datetime import datetime
 from pathlib import Path
-
+import os
 from fastapi import FastAPI, WebSocket, Request
 from fastapi.responses import HTMLResponse
 
 import zmq
 import zmq.asyncio
+import yaml
 
-ZMQ_INPUT_ADDRESS = "tcp://localhost:5556"  # Unified bus for incoming events
-ZMQ_PUSH_ADDRESS = "tcp://localhost:6001"   # Outgoing to Proxy
+# Load config
+with open("config.yaml") as f:
+    config = yaml.safe_load(f)
+
+# Default values from YAML
+push_addr = config['dashboard']['push']
+sub_addr = config['dashboard']['sub']
+
+# Override if ENV VAR is set
+push_addr = os.getenv('DASHBOARD_PUSH_ADDR', push_addr)
+sub_addr = os.getenv('DASHBOARD_SUB_ADDR', sub_addr)
+
+print(f"Dashboard: PUSH → {push_addr}")
+print(f"Dashboard: SUB → {sub_addr}")
 
 ctx = zmq.asyncio.Context()
 
-# SUB socket for incoming bus
+# SUB for incoming bus
 subscriber = ctx.socket(zmq.SUB)
-subscriber.connect(ZMQ_INPUT_ADDRESS)
+subscriber.connect(sub_addr)
 subscriber.setsockopt_string(zmq.SUBSCRIBE, "")
-print(f"Dashboard: SUB connected to {ZMQ_INPUT_ADDRESS}")
+print(f"Dashboard: SUB connected to {sub_addr}")
 
-# PUSH socket for control events
+# PUSH for control commands
 publisher = ctx.socket(zmq.PUSH)
-publisher.connect(ZMQ_PUSH_ADDRESS)
-print(f"Dashboard: PUSH connected to {ZMQ_PUSH_ADDRESS}")
+publisher.connect(push_addr)
+print(f"Dashboard: PUSH connected to {push_addr}")
 
 app = FastAPI()
 event_queue = asyncio.Queue()
@@ -40,8 +52,8 @@ async def websocket_endpoint(websocket: WebSocket):
     print("Dashboard: WebSocket connected.")
     try:
         while True:
-            message = await event_queue.get()
-            await websocket.send_text(message)
+            msg = await event_queue.get()
+            await websocket.send_text(msg)
     except Exception as e:
         print(f"Dashboard: WebSocket closed: {e}")
     finally:

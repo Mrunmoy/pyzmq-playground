@@ -1,0 +1,28 @@
+bus:
+  unified_pub: tcp://*:5556
+
+proxy:
+  file: orchestrator_proxy.py
+  detector_pull: tcp://*:6000
+  dashboard_pull: tcp://*:6001
+
+detector:
+  file: detector.py
+  push: tcp://localhost:6000
+
+dashboard:
+  file: web_dashboard.py
+  push: tcp://localhost:6001
+  sub: tcp://localhost:5556
+
+reactors:
+  - name: logger_reactor
+    type: logger
+    file: logger_reactor.py
+    sub: tcp://localhost:5556
+    log_file: events.log
+
+  - name: reactor
+    type: print
+    file: reactor.py
+    sub: tcp://localhost:5556

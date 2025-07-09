@@ -4,4 +4,22 @@ services:
   playground:
     build: .
     container_name: pyzmq-playground
+    command: ["python3", "orchestrator.py"]
     restart: unless-stopped
+    volumes:
+      - .:/app  # So your config.yaml, scripts & logs are accessible
+    ports:
+      - "5556:5556"  # PUB bus, if you want external SUBs
+
+  dashboard:
+    build: .
+    container_name: pyzmq-dashboard
+    command: ["uvicorn", "web_dashboard:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    restart: unless-stopped
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"  # Web UI
+    environment:
+      DASHBOARD_PUSH_ADDR: "tcp://playground:6001"
+      DASHBOARD_SUB_ADDR: "tcp://playground:5556"

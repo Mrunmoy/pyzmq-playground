@@ -1,167 +1,207 @@
-# pyzmq-playground
+# 🌀 Python ZeroMQ playground
 
-A tiny playground to experiment with **ZeroMQ pub/sub**, orchestration, and event-driven microservices
+![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
+![Python](https://img.shields.io/badge/Python-3.11-blue.svg)
+![ZeroMQ](https://img.shields.io/badge/ZeroMQ-PUB/SUB-brightgreen.svg)
+![Docker](https://img.shields.io/badge/Docker-ready-blue.svg)
 
----
-
-## What is this?
-
-This project is a simple example of a **reactive distributed system**:
-- **Orchestrator:** Starts and supervises the services.
-- **Detector:** Pretends to be a sensor or TinyML module — publishes `object_detected` events at random.
-- **Reactor:** Subscribes to the Detector’s events and reacts when something is actually detected.
-
-It’s minimal on purpose — so you can understand:
-- How **ZeroMQ PUB/SUB** works.
-- How services can communicate asynchronously.
-- How to coordinate small, single-purpose processes.
+A tiny but mighty **ZeroMQ-powered playground** for experimenting with reactive, event-driven microservices — inspired by Geekscape’s [Aiko](https://github.com/geekscape) Framwork. Driven by **YAML config** for maximum flexibility.
 
 ---
 
-## Project structure
+## What’s inside?
+
+**Orchestrator Proxy** — the central event bus:
+- Receives streams from multiple `PUSH` sources (Detector, Dashboard)
+- Publishes *all* events on a single `PUB` socket for Reactors
+
+**Detector** — a fake TinyML module:
+- Randomly detects “objects”
+- Publishes JSON events via `PUSH` to the Proxy
+
+**Dashboard** — a FastAPI web UI:
+- Shows **live logs** in real time
+- Sends **control commands** via `PUSH` (e.g., force detect)
+
+**Reactors** — your event listeners:
+- **LoggerReactor** logs all events to `events.log`
+- **Reactor** prints events to console (simulate side effects)
+
+**YAML Config**:
+- All ports, addresses, log files, and scripts are defined in **`config.yaml`**
+- No more hardcoded ports — swap them anytime!
+
+---
+
+## 🗂️ Directory structure
+
 ```
 pyzmq-playground/
-├── orchestrator.py            # Starts and supervises Detector & Reactor
-├── detector.py                # Publishes fake detection events at random
-├── reactor.py                 # Subscribes & reacts to detection events
-├── requirements.txt           # pyzmq dependency
-├── .gitignore                 # Excludes venv/ and pycache/
-└── README.md                  # This document
+├── orchestrator.py          # Starts Proxy, Detector, Reactors based on config.yaml
+├── orchestrator_proxy.py    # PULL/PULL → unified PUB relay
+├── detector.py              # Fake detection → PUSH → Proxy
+├── reactor.py               # Prints received events
+├── logger_reactor.py        # Logs all events to file
+├── web_dashboard.py         # FastAPI + websockets + buttons
+├── index.html               # Dashboard UI
+├── config.yaml              # All ports, addresses, files, log paths
+├── docker-compose.yaml      # Compose config for containers
+├── Dockerfile               # Container build
+├── requirements.txt         # pyzmq, pyyaml, fastapi, uvicorn
+└── README.md                # This doc!
 ```
+
+---
+
+## Architecture
+
+**System Diagram:**
+
+```
+             +-------------------+
+             |    Detector       |
+             |   (PUSH -> 6000)  |
+             +--------+----------+
+                      |
+                      v
+             +---------------------+
+             |  Orchestrator Proxy |
+             |  (PULL 6000, 6001)  |
+             |     -> PUB 5556     |
+             +--------+------------+
+                      |
+      +---------------+----------------+
+      |               |                |
+      v               v                v
+  LoggerReactor   Reactor         Dashboard SUB
+    (5556)         (5556)             (5556)
+```
+
+- Reactors see *everything*: detection + control commands.
+- One single **unified bus** for fan-out.
+- Add new Reactors or Detectors just by editing `config.yaml`.
 
 ---
 
 ## Getting started
 
-**Create a virtual environment**
-
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # macOS/Linux
-   # or venv\Scripts\activate  # Windows PowerShell
+**Clone & create your venv**
+```bash
+git clone https://github.com/yourusername/pyzmq-playground.git
+cd pyzmq-playground
+python3 -m venv venv
+source venv/bin/activate  # macOS/Linux
+# or venv\Scripts\activate  # Windows
 ```
 
 **Install dependencies**
-```
+```bash
 pip install -r requirements.txt
 ```
 
 **Run the Orchestrator**
-```
+```bash
 python3 orchestrator.py
 ```
 
-**You should see:**
-- The Detector saying “no detection” or “sending 'object_detected'”
-- The Reactor reacting only when an event is actually sent
-
+**In a separate terminal, run the Dashboard**
+```bash
+uvicorn web_dashboard:app --reload --host 0.0.0.0 --port 8000
 ```
-(venv) $ python3 orchestrator.py
-Orchestrator: starting Detector and Reactor services...
-Detector: publishing events on tcp://*:5556
-Detector: sending 'object_detected'
-Reactor: waiting for events...
-Detector: no detection
-Detector: sending 'object_detected'
-Reactor: received 'object_detected' → reacting!
-Detector: no detection
-^C
-Orchestrator: received Ctrl+C, shutting down...
-Detector: stopped by user.
 
-Reactor: stopped by user.
-Orchestrator: all services stopped. Bye!
-$
-```
----
+Open [http://localhost:8000](http://localhost:8000) → see live events!
 
 ---
 
-## [UPDATE]: New: Logging Reactor
+## Running with Docker 🐳
 
-This playground now has **two Reactors** to show how multiple services can subscribe to the same events:
+This playground can also run in containers!
 
-- **Reactor:** Subscribes to the `object_detected` events and prints a reaction to the console.
-- **LoggerReactor:** Subscribes to the same events and writes them to a log file you can watch in real-time.
-
-**Log file path (inside the container):**
-`/app/events.log`
-
-**How to view the log file:**
-
-Open a shell into the running container:
+**Build & start the containers**
 ```bash
-   docker exec -it pyzmq-playground bash
-```
-Tail the log file:
-```tail -f /app/events.log```
-
-You’ll see timestamped detection events appear as they happen!
-
-This shows how you can fan out the same pub/sub stream to multiple independent services with different side effects — one for real-time actions, one for persistent logging.
-
-
-## [UPDATE]: Running with Docker 🐳
-
-This playground is fully containerized so you can run it anywhere!
-
-### Build & run (attached mode)
-
-From your project root:
-```bash
-docker-compose up --build
+docker-compose build
+docker-compose up
 ```
 
-- Builds the Docker image and starts the orchestrator.
-- The orchestrator runs `detector.py` and `reactor.py` inside the container.
-- **Logs are shown live in the same terminal** — thanks to Python’s unbuffered output.
-
-Stop it anytime with `Ctrl+C` — the orchestrator will shut down the Detector & Reactor cleanly.
-
-### Run in the background (detached mode)
-
-```bash
-docker-compose up --build -d
-```
-
-View logs:
-```bash
-docker-compose logs -f playground
-```
-
-Stop and remove the container:
+**Stop & remove containers**
 ```bash
 docker-compose down
 ```
 
-There is a helper script to do it for you.
+**View logs**
+```bash
+docker-compose logs -f
+```
 
-**Note:** Always run these commands in the folder containing `docker-compose.yml`.
-
----
-
-## How it works
-- ZeroMQ PUB/SUB: The Detector binds a PUB socket on tcp://*:5556.
-- The Reactor connects a SUB socket to tcp://localhost:5556.
-- Event loop: The Detector runs forever, simulating a detection with a 30% chance every 5 seconds.
-- Orchestration: The Orchestrator runs both services in separate processes and shuts them down gracefully with Ctrl+C.
+The `docker-compose.yaml` should map your `config.yaml` and `index.html` properly!
 
 ---
 
-## Next ideas
+## Clean up all Docker containers/images
 
-- Dockerize it [done]
-- Add another Reactor that logs events to a file or database [done]
-- Build a simple web dashboard to trigger and visualize detections live.
-
-
----
-
-## Inspired by
-This playground is inspired by Andy Gelme’s [Aiko Platform](https://github.com/geekscape) — a reactive microservice approach for IoT and edge systems.
+```bash
+docker stop $(docker ps -aq)
+docker system prune -af
+```
 
 ---
 
-License
+## Example: `config.yaml`
 
-MIT — feel free to fork, extend, and play!
+```yaml
+bus:
+  unified_pub: tcp://*:5556
+
+proxy:
+  file: orchestrator_proxy.py
+  detector_pull: tcp://*:6000
+  dashboard_pull: tcp://*:6001
+
+detector:
+  file: detector.py
+  push: tcp://localhost:6000
+
+dashboard:
+  file: web_dashboard.py
+  push: tcp://localhost:6001
+  sub: tcp://localhost:5556
+
+reactors:
+  - name: logger_reactor
+    type: logger
+    file: logger_reactor.py
+    sub: tcp://localhost:5556
+    log_file: events.log
+
+  - name: reactor
+    type: print
+    file: reactor.py
+    sub: tcp://localhost:5556
+```
+
+---
+## Screenshot
+![](screenshot_ui.png)
+
+---
+
+## How to extend
+
+- Want another Detector? Add a new section with a unique `push` port.
+- Want another Reactor? Add it to the `reactors` list.
+- Need to change ports? Just tweak the YAML — no code edits needed.
+
+---
+
+## ⚡ Inspired by
+
+Built as a learning playground after attending [Andy Gelme’s AI-ML-Robots](https://www.meetup.com/ai-ml-robots/) sessions in Melbourne.  
+Big shoutout to [Aiko](https://sites.google.com/site/aikoplatform) for the ideas around *orchestrator, reactive microservices* for IoT and edge systems.
+
+---
+
+## License
+
+MIT — fork it, play with it, break it, extend it!
+
+---

@@ -1,39 +1,36 @@
 # orchestrator.py
 import subprocess
 import time
+import yaml
 
-print("Orchestrator: starting Proxy, Detector, Reactor, and LoggerReactor services...")
+with open("config.yaml") as f:
+    config = yaml.safe_load(f)
 
-# Start Orchestrator Proxy
-proxy_process = subprocess.Popen(["python3", "orchestrator_proxy.py"])
-print(f"Started Orchestrator Proxy, PID={proxy_process.pid}", flush=True)
+processes = []
 
-# Start Detector
-detector_process = subprocess.Popen(["python3", "detector.py"])
-print(f"Started Detector, PID={detector_process.pid}", flush=True)
+def start_process(script, name):
+    print(f"Orchestrator: starting {name} ({script})")
+    p = subprocess.Popen(["python3", script])
+    processes.append(p)
+    print(f"  PID={p.pid}")
 
-# Start Reactor
-reactor_process = subprocess.Popen(["python3", "reactor.py"])
-print(f"Started Reactor, PID={reactor_process.pid}", flush=True)
+# Always start the Proxy
+start_process(config['proxy']['file'], "Proxy")
 
-# Start Logger Reactor
-logger_reactor_process = subprocess.Popen(["python3", "logger_reactor.py"])
-print(f"Started LoggerReactor, PID={logger_reactor_process.pid}", flush=True)
+# Always start the Detector
+start_process(config['detector']['file'], "Detector")
+
+# Start all Reactors from list
+for reactor in config['reactors']:
+    start_process(reactor['file'], f"Reactor ({reactor['name']})")
 
 try:
     while True:
         time.sleep(1)
 except KeyboardInterrupt:
     print("\nOrchestrator: received Ctrl+C, shutting down...")
-
-    proxy_process.terminate()
-    detector_process.terminate()
-    reactor_process.terminate()
-    logger_reactor_process.terminate()
-
-    proxy_process.wait()
-    detector_process.wait()
-    reactor_process.wait()
-    logger_reactor_process.wait()
-
+    for p in processes:
+        p.terminate()
+    for p in processes:
+        p.wait()
     print("Orchestrator: all services stopped. Bye!")

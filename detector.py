@@ -1,18 +1,23 @@
-# detector.py
 import zmq
 import time
 import random
 import json
 from datetime import datetime
+import yaml
+
+with open("config.yaml") as f:
+    config = yaml.safe_load(f)
 
 context = zmq.Context()
+push_addr = config['detector']['push']
+
 publisher = context.socket(zmq.PUSH)
-publisher.connect("tcp://localhost:6000")
-print("Detector: PUSH connected to tcp://localhost:6000")
+publisher.connect(push_addr)
+print(f"Detector: PUSH connected to {push_addr}")
 
 try:
     while True:
-        time.sleep(5)
+        time.sleep(2)
         detected = random.random() < 0.3
         if detected:
             payload = {

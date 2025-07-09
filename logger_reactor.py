@@ -1,28 +1,29 @@
 import zmq
-from pathlib import Path
-from datetime import datetime
+import yaml
 
-# Use an env var if you want later, or just default to relative
-LOG_FILE = Path("events.log").resolve()
-print(f"LoggerReactor: logging to {LOG_FILE}")
+with open("config.yaml") as f:
+    config = yaml.safe_load(f)
+
+# Find the logger reactor entry
+logger_config = next(r for r in config['reactors'] if r['type'] == 'logger')
 
 context = zmq.Context()
+sub_addr = logger_config['sub']
+log_file = logger_config['log_file']
+
 subscriber = context.socket(zmq.SUB)
-subscriber.connect("tcp://localhost:5556")
+subscriber.connect(sub_addr)
 subscriber.setsockopt_string(zmq.SUBSCRIBE, "")
 
-print("LoggerReactor: waiting for events...")
+print(f"LoggerReactor: SUB connected to {sub_addr}")
+print(f"LoggerReactor: logging to {log_file}")
 
-try:
-    while True:
-        message = subscriber.recv_string()
-        timestamp = datetime.utcnow().isoformat()
-        log_line = f"{timestamp} - {message}\n"
-        with open(LOG_FILE, "a") as f:
-            f.write(log_line)
-        print(f"LoggerReactor: wrote '{message}' to {LOG_FILE}")
-except KeyboardInterrupt:
-    print("LoggerReactor: stopped by user.")
-finally:
-    subscriber.close()
-    context.term()
+with open(log_file, "a") as f:
+    try:
+        while True:
+            message = subscriber.recv_string()
+            f.write(message + "\n")
+            f.flush()
+            print(f"LoggerReactor: {message}")
+    except KeyboardInterrupt:
+        print("LoggerReactor: stopped.")
