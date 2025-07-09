@@ -1,6 +1,6 @@
 # pyzmq-playground
 
-A tiny playground to experiment with **ZeroMQ pub/sub**, orchestration, and event-driven microservices — inspired by the Aiko platform style.
+A tiny playground to experiment with **ZeroMQ pub/sub**, orchestration, and event-driven microservices
 
 ---
 
@@ -150,14 +150,14 @@ There is a helper script to do it for you.
 
 ## Next ideas
 
-- Dockerize it [done]s
-- Add another Reactor that logs events to a file or database.
+- Dockerize it [done]
+- Add another Reactor that logs events to a file or database [done]
 - Build a simple web dashboard to trigger and visualize detections live.
 
 
 ---
 
-## 📚 Inspired by
+## Inspired by
 This playground is inspired by Andy Gelme’s [Aiko Platform](https://github.com/geekscape) — a reactive microservice approach for IoT and edge systems.
 
 ---
@@ -165,5 +165,3 @@ This playground is inspired by Andy Gelme’s [Aiko Platform](https://github.com
 License
 
 MIT — feel free to fork, extend, and play!
-
-🎉 Happy hacking!
